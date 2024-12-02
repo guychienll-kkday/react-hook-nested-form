@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
 
 const IDENTITY_OPTIONS = [
   {
@@ -39,19 +39,17 @@ function PackageItem({ pkg }) {
   const {
     control,
     reset,
-    watch,
-    setValue,
     formState: { isDirty },
+    watch,
   } = useForm({
     items: [],
   });
 
   const items = watch("items") || [];
-
-  const appendItem = (item) => {
-    const nextItems = [...items, item];
-    setValue("items", nextItems, { shouldDirty: true });
-  };
+  const { fields, append, remove, move } = useFieldArray({
+    control,
+    name: "items",
+  });
 
   useEffect(() => {
     reset({
@@ -79,18 +77,18 @@ function PackageItem({ pkg }) {
               已選擇的身份
             </h2>
             <div className="space-y-4">
-              {items.map((item) => (
+              {items.map((field) => (
                 <div
-                  key={item.id}
+                  key={field.id}
                   className="bg-gray-50 rounded-lg p-6 border border-gray-100"
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div className="font-semibold text-xl text-gray-800">
-                      {item.name}
+                      {field.name}
                     </div>
                   </div>
                   <div className="text-gray-600">
-                    年齡範圍: {item.config.ageFrom} - {item.config.ageTo} 歲
+                    年齡範圍: {field.config.ageFrom} - {field.config.ageTo} 歲
                   </div>
                 </div>
               ))}
@@ -126,7 +124,7 @@ function PackageItem({ pkg }) {
                   className="px-8 py-3 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => {
                     if (!selectedIdentity) return;
-                    appendItem({
+                    append({
                       id: selectedIdentity,
                       name: IDENTITY_OPTIONS.find(
                         (option) => option.uuid === selectedIdentity
@@ -146,54 +144,85 @@ function PackageItem({ pkg }) {
               </div>
 
               <div className="space-y-4">
-                {items.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className="bg-gray-50 rounded-lg p-6 border border-gray-100"
-                  >
-                    <div className="font-medium text-lg text-gray-800 mb-4">
-                      {item.name}
-                    </div>
-                    <div className="grid grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-2">
-                          最小年齡
-                        </label>
-                        <Controller
-                          control={control}
-                          name={`items.${index}.config.ageFrom`}
-                          render={({ field }) => (
-                            <input
-                              min={0}
-                              max={200}
-                              type="number"
-                              className="w-full rounded-lg border border-gray-200 px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-                              {...field}
-                            />
-                          )}
-                        />
+                {fields.map((field, index) => {
+                  const isFirst = index === 0;
+                  const isLast = index === fields.length - 1;
+                  return (
+                    <div
+                      key={field.id}
+                      className="bg-gray-50 rounded-lg p-6 border border-gray-100"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="font-semibold text-xl text-gray-800">
+                          {field.name}
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            disabled={isFirst}
+                            className="text-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => move(index, index - 1)}
+                          >
+                            上移
+                          </button>
+                          <button
+                            disabled={isLast}
+                            className="text-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => move(index, index + 1)}
+                          >
+                            下移
+                          </button>
+                          <button
+                            disabled={fields.length === 1}
+                            className="text-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => remove(index)}
+                          >
+                            刪除
+                          </button>
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-2">
-                          最大年齡
-                        </label>
-                        <Controller
-                          control={control}
-                          name={`items.${index}.config.ageTo`}
-                          render={({ field }) => (
-                            <input
-                              min={0}
-                              max={200}
-                              type="number"
-                              className="w-full rounded-lg border border-gray-200 px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-                              {...field}
-                            />
-                          )}
-                        />
+                      <div className="grid grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-2">
+                            最小年齡
+                          </label>
+                          <Controller
+                            control={control}
+                            name={`items.${index}.config.ageFrom`}
+                            render={({ field }) => {
+                              return (
+                                <input
+                                  min={0}
+                                  max={200}
+                                  type="number"
+                                  className="w-full rounded-lg border border-gray-200 px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                                  {...field}
+                                />
+                              );
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-2">
+                            最大年齡
+                          </label>
+                          <Controller
+                            control={control}
+                            name={`items.${index}.config.ageTo`}
+                            render={({ field }) => (
+                              <input
+                                min={0}
+                                max={200}
+                                type="number"
+                                className="w-full rounded-lg border border-gray-200 px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                                {...field}
+                              />
+                            )}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
